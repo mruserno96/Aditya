@@ -4,13 +4,12 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Read credentials from environment variables (set these in Render)
-BOT_TOKEN = os.getenv("7639952982:AAGqiiF4amQmv0yGD9MlzeXve6pz2MrGfGY")
-FAST2SMS_API_KEY = os.getenv("6CWt5YVjazIwOsuATZFMEo7m1H0RXLcJSU9G28Qvdxif4lyqN3kT5tENuMJw70fxemSiFqLa3UoQHDBr")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+FAST2SMS_API_KEY = os.getenv("FAST2SMS_API_KEY")
 
-# Put exactly two Telegram IDs here (integers)
 ALLOWED_USERS = [
-    int(os.getenv("7993455374", "0")),
-    int(os.getenv("7357160729", "0"))
+    int(os.getenv("TELEGRAM_ID_1", "0")),
+    int(os.getenv("TELEGRAM_ID_2", "0"))
 ]
 
 if not BOT_TOKEN or not FAST2SMS_API_KEY:
