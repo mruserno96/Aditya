@@ -1,30 +1,34 @@
+import os
 import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# ========================
-# CONFIGURATION
-# ========================
-BOT_TOKEN = "7639952982:AAGqiiF4amQmv0yGD9MlzeXve6pz2MrGfGY"
-FAST2SMS_API_KEY = "6CWt5YVjazIwOsuATZFMEo7m1H0RXLcJSU9G28Qvdxif4lyqN3kT5tENuMJw70fxemSiFqLa3UoQHDBr"
+# Read credentials from environment variables (set these in Render)
+BOT_TOKEN = os.getenv("7639952982:AAGqiiF4amQmv0yGD9MlzeXve6pz2MrGfGY")
+FAST2SMS_API_KEY = os.getenv("6CWt5YVjazIwOsuATZFMEo7m1H0RXLcJSU9G28Qvdxif4lyqN3kT5tENuMJw70fxemSiFqLa3UoQHDBr")
 
-# Only these 2 Telegram IDs can use the bot
-ALLOWED_USERS = [7993455374, 7357160729]  # Replace with your IDs
+# Put exactly two Telegram IDs here (integers)
+ALLOWED_USERS = [
+    int(os.getenv("7993455374", "0")),
+    int(os.getenv("7357160729", "0"))
+]
 
-# ========================
-# FUNCTIONS
-# ========================
+if not BOT_TOKEN or not FAST2SMS_API_KEY:
+    raise SystemExit("Missing BOT_TOKEN or FAST2SMS_API_KEY environment variables.")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ALLOWED_USERS:
+    user_id = update.effective_user.id
+    if user_id not in ALLOWED_USERS:
         await update.message.reply_text("⛔ Access Denied.")
         return
-    await update.message.reply_text("✅ Welcome! Use /sms <number> <message> to send an SMS.")
+    await update.message.reply_text("✅ Hello! Use /sms <number> <message> to send SMS.")
 
-async def send_sms(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in ALLOWED_USERS:
+async def send_sms_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ALLOWED_USERS:
         await update.message.reply_text("⛔ Access Denied.")
         return
-    
+
     if len(context.args) < 2:
         await update.message.reply_text("❌ Usage: /sms <number> <message>")
         return
@@ -32,13 +36,10 @@ async def send_sms(update: Update, context: ContextTypes.DEFAULT_TYPE):
     number = context.args[0]
     message = " ".join(context.args[1:])
 
-    # Send SMS via Fast2SMS API
     url = "https://www.fast2sms.com/dev/bulkV2"
     payload = {
-        "route": "q",
         "message": message,
-        "language": "english",
-        "flash": 0,
+        "route": "v3",
         "numbers": number
     }
     headers = {
@@ -47,23 +48,20 @@ async def send_sms(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     try:
-        response = requests.post(url, data=payload, headers=headers)
-        if response.status_code == 200:
+        resp = requests.post(url, data=payload, headers=headers, timeout=15)
+        if resp.status_code == 200:
+            # Fast2sms returns JSON; adapt messaging if needed
             await update.message.reply_text("📩 SMS Sent Successfully!")
         else:
-            await update.message.reply_text(f"❌ Failed: {response.text}")
+            await update.message.reply_text(f"❌ Failed ({resp.status_code}): {resp.text}")
     except Exception as e:
         await update.message.reply_text(f"⚠ Error: {e}")
 
-# ========================
-# MAIN
-# ========================
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("sms", send_sms))
-
+    app.add_handler(CommandHandler("sms", send_sms_cmd))
+    print("Bot started. Waiting for updates...")
     app.run_polling()
 
 if __name__ == "__main__":
